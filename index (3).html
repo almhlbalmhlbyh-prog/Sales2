@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تتبع المبيعات</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f8f8f8; }
+        h1 { text-align: center; }
+        input, button { padding: 8px; margin: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #4CAF50; color: white; }
+        .actions button { margin: 0 3px; }
+    </style>
+</head>
+<body>
+
+    <h1>📊 سجل المبيعات</h1>
+
+    <input type="text" id="product" placeholder="اسم المنتج">
+    <input type="number" id="quantity" placeholder="الكمية">
+    <input type="date" id="date">
+    <button onclick="addSale()">➕ إضافة</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>اسم المنتج</th>
+                <th>الكمية</th>
+                <th>التاريخ</th>
+                <th>الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody id="salesTable"></tbody>
+        <tfoot>
+            <tr>
+                <th colspan="4" id="total">إجمالي المبيعات: 0</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <script>
+        let sales = JSON.parse(localStorage.getItem('sales')) || [];
+
+        function renderSales() {
+            let table = document.getElementById('salesTable');
+            table.innerHTML = '';
+            let total = 0;
+            sales.forEach((sale, index) => {
+                total += sale.quantity;
+                table.innerHTML += `
+                    <tr>
+                        <td>${sale.product}</td>
+                        <td>${sale.quantity}</td>
+                        <td>${sale.date}</td>
+                        <td class="actions">
+                            <button onclick="editSale(${index})">✏️ تعديل</button>
+                            <button onclick="deleteSale(${index})">🗑️ حذف</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            document.getElementById('total').innerText = 'إجمالي المبيعات: ' + total;
+            localStorage.setItem('sales', JSON.stringify(sales));
+        }
+
+        function addSale() {
+            let product = document.getElementById('product').value;
+            let quantity = parseInt(document.getElementById('quantity').value);
+            let date = document.getElementById('date').value;
+            if (product && quantity && date) {
+                sales.push({ product, quantity, date });
+                renderSales();
+                document.getElementById('product').value = '';
+                document.getElementById('quantity').value = '';
+                document.getElementById('date').value = '';
+            } else {
+                alert('⚠️ يرجى إدخال كل البيانات');
+            }
+        }
+
+        function editSale(index) {
+            let sale = sales[index];
+            document.getElementById('product').value = sale.product;
+            document.getElementById('quantity').value = sale.quantity;
+            document.getElementById('date').value = sale.date;
+            sales.splice(index, 1);
+            renderSales();
+        }
+
+        function deleteSale(index) {
+            if (confirm('هل أنت متأكد من الحذف؟')) {
+                sales.splice(index, 1);
+                renderSales();
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(() => {
+                console.log("✅ Service Worker مسجل");
+            }).catch(err => console.error("❌ فشل التسجيل:", err));
+        }
+
+        renderSales();
+    </script>
+
+</body>
+</html>
