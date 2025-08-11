@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📊 نظام تتبع المبيعات</title>
+  <meta name="theme-color" content="#0ea5e9">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root{ --bg:#f6f7fb; --card:#fff; --text:#0f172a; --muted:#6b7280; --accent:#0ea5e9; --danger:#ef4444; --border:#e5e7eb; }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,Arial,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:20px;line-height:1.6}
+    .container{background:var(--card);padding:20px;border-radius:16px;max-width:1100px;margin:auto;box-shadow:0 4px 24px rgba(2,8,23,.12);border:1px solid var(--border)}
+    h1{font-size:28px;margin:0 0 6px}
+    .sub{color:var(--muted);margin:0 0 14px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input,select,button{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text)}
+    input::placeholder{color:var(--muted)}
+    button{background:var(--accent);border-color:transparent;color:white;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+    button.danger{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+    .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center}
+    .card .k{font-size:22px;font-weight:700}
+    table{width:100%;border-collapse:collapse;margin-top:12px;border:1px solid var(--border)}
+    th,td{border-top:1px solid var(--border);padding:10px}
+    th{background:rgba(2,8,23,.04);cursor:pointer}
+    tfoot td{font-weight:bold;background:rgba(2,8,23,.04)}
+    .actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+    .toolbar{margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    canvas{width:100%;height:220px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <h1>📊 نظام تتبع المبيعات</h1>
+        <p class="sub">إضافة/تعديل/حذف + فلاتر + تصدير CSV + رسم بياني + يعمل بدون إنترنت.</p>
+      </div>
+      <div class="row">
+        <button class="ghost" id="installBtn" hidden>تثبيت كتطبيق</button>
+        <button class="ghost" id="printBtn">طباعة تقرير</button>
+      </div>
+    </div>
+
+    <!-- إضافة بيع -->
+    <div class="row">
+      <input list="productsList" type="text" id="productName" placeholder="اسم المنتج">
+      <datalist id="productsList"></datalist>
+      <input type="number" id="salesInput" placeholder="عدد المبيعات">
+      <input type="date" id="dateInput">
+      <button id="addBtn">إضافة</button>
+    </div>
+
+    <!-- فلاتر وبحث وتصدير -->
+    <div class="toolbar">
+      <select id="filterMode">
+        <option value="all">كل السجلات</option>
+        <option value="today">اليوم</option>
+        <option value="week">هذا الأسبوع</option>
+        <option value="month">هذا الشهر</option>
+        <option value="range">نطاق تاريخ</option>
+      </select>
+      <input type="date" id="fromDate" style="display:none">
+      <input type="date" id="toDate" style="display:none">
+      <input type="text" id="search" placeholder="بحث في المنتج...">
+      <button class="ghost" id="exportCsvFiltered">تصدير CSV (حسب الفلتر)</button>
+      <button class="ghost" id="backupBtn">تنزيل نسخة احتياطية</button>
+      <label class="ghost" style="padding:8px 12px;display:inline-block;cursor:pointer">
+        استيراد نسخة
+        <input id="restoreInput" type="file" accept=".json" style="display:none">
+      </label>
+    </div>
+
+    <!-- ملخصات -->
+    <div class="grid">
+      <div class="card"><div class="sub">إجمالي اليوم</div><div class="k" id="sumToday">0</div></div>
+      <div class="card"><div class="sub">هذا الأسبوع</div><div class="k" id="sumWeek">0</div></div>
+      <div class="card"><div class="sub">هذا الشهر</div><div class="k" id="sumMonth">0</div></div>
+      <div class="card"><div class="sub">أعلى المنتجات</div><div class="k" id="topProducts">-</div></div>
+      <div class="card"><div class="sub">إجمالي ظاهر بالجدول</div><div class="k"><span id="tfootCount">0</span></div></div>
+    </div>
+
+    <!-- جدول -->
+    <table>
+      <thead>
+        <tr>
+          <th data-sort="dateISO">التاريخ</th>
+          <th data-sort="product">اسم المنتج</th>
+          <th data-sort="count">عدد</th>
+          <th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <div class="toolbar">
+      <select id="productSelect">
+        <option value="">-- اختر المنتج لمعرفة مجموعه --</option>
+      </select>
+      <div class="sub" id="productTotalDisplay"></div>
+      <button class="danger" id="deleteAllBtn">حذف كل السجلات</button>
+    </div>
+
+    <h3 class="sub">رسم بياني (حسب الفلتر)</h3>
+    <canvas id="chart" width="1100" height="240"></canvas>
+  </div>
+
+<script>
+let sales = JSON.parse(localStorage.getItem('salesData')||'[]');
+let sortState = { key:'dateISO', dir:'desc' };
+let editId = null;
+const $ = sel=>document.querySelector(sel), $$ = sel=>document.querySelectorAll(sel);
+function save(){ localStorage.setItem('salesData', JSON.stringify(sales)); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function inWeek(d){ const dt=new Date(d), now=new Date(); const sd=new Date(now); sd.setDate(now.getDate()-6); return dt<=now && dt>=sd; }
+function inMonth(d){ const dt=new Date(d), now=new Date(); return dt.getUTCFullYear()==now.getUTCFullYear() && dt.getUTCMonth()==now.getUTCMonth(); }
+
+$('#dateInput').value = todayISO();
+$('#printBtn').onclick=()=>window.print();
+$('#addBtn').onclick=addSale;
+$('#filterMode').onchange=()=>{ const show=$('#filterMode').value==='range'; $('#fromDate').style.display=show?'block':'none'; $('#toDate').style.display=show?'block':'none'; render(); };
+$('#fromDate').onchange=render; $('#toDate').onchange=render;
+$('#search').oninput=render;
+$('#exportCsvFiltered').onclick=()=>exportCSV(filteredSales(),'sales-filtered.csv');
+$('#backupBtn').onclick=downloadBackup;
+$('#restoreInput').onchange=restoreBackup;
+$('#deleteAllBtn').onclick=deleteAllConfirm;
+$$('th[data-sort]').forEach(th=> th.onclick=()=>sortBy(th.dataset.sort));
+
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js'); }
+let deferredPrompt; window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt=e; $('#installBtn').hidden=false; });
+$('#installBtn').onclick=async()=>{ if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt=null; $('#installBtn').hidden=true; } };
+
+function addSale(){
+  const product=$('#productName').value.trim();
+  const count=parseInt($('#salesInput').value,10);
+  const dateISO=$('#dateInput').value || todayISO();
+  if(!product) return alert('أدخل اسم المنتج');
+  if(!count || count<=0) return alert('أدخل عدد صحيح');
+  sales.push({ id: Date.now(), product, count, dateISO });
+  save(); render(); clearInputs();
+}
+function clearInputs(){ $('#productName').value=''; $('#salesInput').value=''; $('#dateInput').value=todayISO(); }
+
+function ensureMigrations(){
+  let changed=false;
+  sales.forEach(s=>{ if(!s.id){ s.id=Date.now()+Math.floor(Math.random()*1e6); changed=true; } if(!s.dateISO && s.date){ const d=new Date(s.date); s.dateISO=isNaN(d)?todayISO(): d.toISOString().slice(0,10); changed=true; } });
+  if(changed) save();
+}
+
+function sortBy(key){
+  if(sortState.key===key){ sortState.dir = (sortState.dir==='asc'?'desc':'asc'); }
+  else { sortState.key=key; sortState.dir='asc'; }
+  render();
+}
+
+function filteredSales(){
+  const q=$('#search').value.trim().toLowerCase();
+  const mode=$('#filterMode').value;
+  const from=$('#fromDate').value; const to=$('#toDate').value;
+  return sales.filter(s=>{
+    if(q && !(s.product||'').toLowerCase().includes(q)) return false;
+    if(mode==='today' && s.dateISO!==todayISO()) return false;
+    if(mode==='week' && !inWeek(s.dateISO)) return false;
+    if(mode==='month' && !inMonth(s.dateISO)) return false;
+    if(mode==='range'){ if(from && s.dateISO<from) return false; if(to && s.dateISO>to) return false; }
+    return true;
+  }).sort((a,b)=>{
+    const ka=a[sortState.key]; const kb=b[sortState.key];
+    return (ka==kb?0:(ka>kb?1:-1)) * (sortState.dir==='asc'?1:-1);
+  });
+}
+
+function exportCSV(data, filename){
+  const rows=[['date','product','count']].concat(
+    data.map(s=>[s.dateISO, s.product, s.count])
+  );
+  const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+}
+
+function downloadBackup(){
+  const data={ sales };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`sales-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url);
+}
+function restoreBackup(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{ try{ const obj=JSON.parse(reader.result); if(Array.isArray(obj.sales)) sales=obj.sales; save(); render(); alert('تم الاستيراد'); } catch{ alert('ملف غير صالح'); } e.target.value=''; };
+  reader.readAsText(file);
+}
+
+function startEdit(id){ editId=id; render(); }
+function cancelEdit(){ editId=null; render(); }
+function saveRow(id){
+  const d=$('#e_date_'+id).value; const p=$('#e_prod_'+id).value.trim(); const c=parseInt($('#e_cnt_'+id).value,10);
+  if(!p) return alert('اسم المنتج مطلوب'); if(!c || c<=0) return alert('عدد غير صحيح');
+  const row=sales.find(s=>s.id===id); if(!row) return;
+  row.dateISO = d || row.dateISO; row.product = p; row.count = c; save(); editId=null; render();
+}
+function delRow(id){ if(!confirm('حذف هذا السجل؟')) return; sales = sales.filter(s=>s.id!==id); save(); render(); }
+
+function updateProductSelect(){
+  const names=Array.from(new Set(sales.map(s=>s.product||'غير محدد'))).sort();
+  const sel=$('#productSelect'); sel.innerHTML='<option value="">-- اختر المنتج لمعرفة مجموعه --</option>';
+  names.forEach(n=> sel.innerHTML += `<option value="${n}">${n}</option>`);
+  const dl=$('#productsList'); dl.innerHTML=''; names.forEach(n=> dl.innerHTML += `<option value="${n}">`);
+}
+$('#productSelect').onchange=()=>{
+  const p=$('#productSelect').value; if(!p){ $('#productTotalDisplay').textContent=''; return; }
+  const t=sales.filter(s=>s.product===p).reduce((sum,s)=>sum+s.count,0);
+  $('#productTotalDisplay').textContent = `إجمالي "${p}": ${t}`;
+};
+
+function drawChart(data){
+  const cvs=$('#chart'), ctx=cvs.getContext('2d');
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  const map={}; data.forEach(s=> map[s.dateISO]=(map[s.dateISO]||0)+s.count);
+  const entries=Object.entries(map).sort((a,b)=>a[0].localeCompare(b[0]));
+  if(!entries.length){ ctx.fillStyle='#666'; ctx.fillText('لا توجد بيانات في الفلتر الحالي',20,30); return; }
+  const labels=entries.map(e=>e[0]); const values=entries.map(e=>e[1]);
+  const padL=40, padB=30; const W=cvs.width-padL-10; const H=cvs.height-10-padB;
+  const maxV=Math.max(...values);
+  ctx.strokeStyle='#94a3b8'; ctx.beginPath(); ctx.moveTo(padL,10); ctx.lineTo(padL,10+H); ctx.lineTo(padL+W,10+H); ctx.stroke();
+  const barW=Math.max(10, Math.min(60, W/values.length - 8));
+  values.forEach((v,i)=>{
+    const x=padL + i*(barW+8) + 8;
+    const h=Math.round((v/maxV)*(H-10));
+    ctx.fillStyle='#0ea5e9';
+    ctx.fillRect(x, 10+H-h, barW, h);
+    ctx.fillStyle='#0f172a'; ctx.font='12px sans-serif';
+    ctx.fillText(String(v), x, 10+H-h-4);
+  });
+}
+
+function renderTable(data){
+  const tb=$('#rows'); tb.innerHTML='';
+  let totalCount=0;
+  data.forEach(row=>{
+    totalCount += row.count||0;
+    const tr=document.createElement('tr');
+    if(editId===row.id){
+      tr.innerHTML = `
+        <td><input type="date" id="e_date_${row.id}" value="${row.dateISO||''}"></td>
+        <td><input type="text" id="e_prod_${row.id}" value="${row.product||''}"></td>
+        <td><input type="number" min="1" id="e_cnt_${row.id}" value="${row.count||1}"></td>
+        <td class="actions">
+          <button class="ghost" onclick="saveRow(${row.id})">حفظ</button>
+          <button class="ghost" onclick="cancelEdit()">إلغاء</button>
+          <button class="danger" onclick="delRow(${row.id})">حذف</button>
+        </td>`;
+    } else {
+      tr.innerHTML = `
+        <td>${row.dateISO||''}</td>
+        <td>${row.product||'غير محدد'}</td>
+        <td>${row.count||0}</td>
+        <td class="actions">
+          <button class="ghost" onclick="startEdit(${row.id})">تعديل</button>
+          <button class="danger" onclick="delRow(${row.id})">حذف</button>
+        </td>`;
+    }
+    tb.appendChild(tr);
+  });
+  $('#tfootCount').textContent = totalCount;
+}
+
+function deleteAllConfirm(){
+  if(!confirm('حذف **كل** السجلات؟')) return;
+  sales=[]; save(); render();
+}
+
+function render(){
+  ensureMigrations();
+  const tDay=sales.filter(s=>s.dateISO===todayISO()).reduce((t,s)=>t+s.count,0);
+  const tWeek=sales.filter(s=>inWeek(s.dateISO)).reduce((t,s)=>t+s.count,0);
+  const tMonth=sales.filter(s=>inMonth(s.dateISO)).reduce((t,s)=>t+s.count,0);
+  $('#sumToday').textContent=tDay; $('#sumWeek').textContent=tWeek; $('#sumMonth').textContent=tMonth;
+  const map={}; sales.forEach(s=> map[s.product]=(map[s.product]||0)+s.count);
+  const top=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k} (${v})`).join('، ') || '-';
+  $('#topProducts').textContent=top;
+
+  const data=filteredSales();
+  renderTable(data);
+  updateProductSelect();
+  drawChart(data);
+}
+
+render();
+</script>
+</body>
+</html>
