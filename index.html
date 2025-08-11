@@ -1,109 +1,130 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>تتبع المبيعات المتقدم</title>
-  <meta name="theme-color" content="#0ea5e9">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 نظام تتبع المبيعات</title>
   <link rel="manifest" href="manifest.json">
   <style>
-    :root{
-      --bg:#f6f7fb; --card:#fff; --text:#0f172a; --muted:#6b7280; --accent:#0ea5e9; --danger:#ef4444; --border:#e5e7eb;
-    }
-    .dark:root, body.dark{ --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#a1a1aa; --accent:#38bdf8; --danger:#ef4444; --border:#1f2937; }
-    *{box-sizing:border-box}
-    body{font-family:system-ui,Arial,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:20px;line-height:1.6}
-    .container{background:var(--card);padding:20px;border-radius:16px;max-width:1100px;margin:auto;box-shadow:0 4px 24px rgba(2,8,23,.12);border:1px solid var(--border)}
-    h1{font-size:28px;margin:0 0 6px}
-    .sub{color:var(--muted);margin:0 0 14px}
-    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    input,select,button{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text)}
-    input::placeholder{color:var(--muted)}
-    button{background:var(--accent);border-color:transparent;color:white;cursor:pointer}
-    button.ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
-    button.danger{background:#fee2e2;color:#991b1b;border-color:#fecaca}
-    .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center}
-    .card .k{font-size:22px;font-weight:700}
-    table{width:100%;border-collapse:collapse;margin-top:12px;border:1px solid var(--border)}
-    th,td{border-top:1px solid var(--border);padding:10px}
-    th{background:rgba(2,8,23,.04);cursor:pointer}
-    tfoot td{font-weight:bold;background:rgba(2,8,23,.04)}
-    .actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
-    .toolbar{margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .section-title{margin-top:18px;margin-bottom:6px;font-weight:700}
-    .muted{color:var(--muted);font-size:14px}
-    .footer{margin-top:14px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
-    canvas{width:100%;height:220px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
-    .progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
-    .progress > div{height:100%}
-    @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
-    @media print{
-      #themeBtn,#installBtn,.toolbar,.actions,.no-print{display:none !important}
-      body{padding:0;background:white} .container{box-shadow:none;border:none}
-    }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; text-align: center; }
+    .container { background: white; padding: 20px; margin: 20px auto; border-radius: 10px; max-width: 500px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, select, button { padding: 8px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; width: 90%; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #eee; }
+    .edit-btn { background: orange; color: white; padding: 5px; border: none; border-radius: 5px; cursor: pointer; }
+    .delete-btn { background: red; color: white; padding: 5px; border: none; border-radius: 5px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="row" style="justify-content:space-between">
-      <div>
-        <h1>📊 نظام تتبع المبيعات</h1>
-        <p class="sub">سجّل البيع، راقب الملخصات والإيراد، وصدّر نسخة احتياطية.</p>
-      </div>
-      <div class="row">
-        <button class="ghost" id="themeBtn">الوضع الليلي</button>
-        <button class="ghost" id="installBtn" hidden>تثبيت كتطبيق</button>
-        <button class="ghost no-print" id="printBtn">طباعة تقرير</button>
-      </div>
-    </div>
 
-    <!-- إضافة بيع -->
-    <div class="row">
-      <input list="productsList" type="text" id="productName" placeholder="اسم المنتج">
-      <datalist id="productsList"></datalist>
-      <input type="number" id="salesInput" placeholder="عدد المبيعات">
-      <input type="number" id="priceInput" placeholder="سعر الوحدة (اختياري) - OMR" step="0.001" min="0">
-      <input type="date" id="dateInput">
-      <button id="addBtn">إضافة</button>
-    </div>
-    <div class="row muted">
-      <label><input type="checkbox" id="mergeSameDay" checked> دمج نفس المنتج في نفس اليوم تلقائيًا</label>
-      <button class="ghost" id="undoBtn">تراجع (Undo)</button>
-      <button class="ghost" id="clearFiltersBtn">مسح الفلاتر</button>
-    </div>
+<div class="container">
+  <h2>📊 نظام تتبع المبيعات</h2>
+  <input type="text" id="productName" placeholder="اسم المنتج">
+  <input type="number" id="productQty" placeholder="عدد المنتجات">
+  <button onclick="addSale()">إضافة</button>
 
-    <!-- أهداف -->
-    <div class="section-title">🎯 الأهداف</div>
-    <div class="row">
-      <input type="number" id="targetDaily" placeholder="هدف يومي (عدد)">
-      <input type="number" id="targetMonthly" placeholder="هدف شهري (عدد)">
-      <button class="ghost" id="saveTargetsBtn">حفظ الأهداف</button>
-    </div>
-    <div class="grid">
-      <div class="card"><div class="muted">إجمالي اليوم</div><div class="k" id="sumToday">0</div><div class="progress"><div id="progDay" style="width:0%;background:#22c55e"></div></div></div>
-      <div class="card"><div class="muted">هذا الأسبوع</div><div class="k" id="sumWeek">0</div></div>
-      <div class="card"><div class="muted">هذا الشهر</div><div class="k" id="sumMonth">0</div><div class="progress"><div id="progMonth" style="width:0%;background:#22c55e"></div></div></div>
-      <div class="card"><div class="muted">الإيراد اليومي (OMR)</div><div class="k" id="revToday">0.000</div></div>
-      <div class="card"><div class="muted">أفضل المنتجات</div><div class="k" id="topProducts">-</div></div>
-    </div>
+  <h3 id="totalSales">إجمالي المبيعات: 0</h3>
+  <table id="salesTable">
+    <tr>
+      <th>التاريخ</th>
+      <th>اسم المنتج</th>
+      <th>عدد المبيعات</th>
+      <th>إجراءات</th>
+    </tr>
+  </table>
 
-    <!-- فلاتر وبحث وتصدير -->
-    <div class="toolbar">
-      <select id="filterMode">
-        <option value="all">كل السجلات</option>
-        <option value="today">اليوم</option>
-        <option value="week">هذا الأسبوع</option>
-        <option value="month">هذا الشهر</option>
-        <option value="range">نطاق تاريخ</option>
-      </select>
-      <input type="date" id="fromDate" style="display:none">
-      <input type="date" id="toDate" style="display:none">
-      <input type="text" id="search" placeholder="بحث في المنتج...">
-      <button class="ghost" id="exportCsv">تصدير CSV (الكل)</button>
-      <button class="ghost" id="exportCsvFiltered">تصدير CSV (حسب الفلتر)</button>
-      <button class="ghost" id="backupBtn">تنزيل نسخة احتياطية</button>
-      <label class="ghost" style="padding:8px 12px;display:inline-block;cursor:pointer">
+  <h4>اختر منتج لمعرفة مجموع مبيعاته:</h4>
+  <input type="text" id="filterProduct" placeholder="اكتب اسم المنتج">
+  <button onclick="filterSales()">عرض المجموع</button>
+  <p id="productTotal"></p>
+</div>
+
+<script>
+  let sales = JSON.parse(localStorage.getItem("sales")) || [];
+
+  function saveData() {
+    localStorage.setItem("sales", JSON.stringify(sales));
+  }
+
+  function renderTable() {
+    let table = document.getElementById("salesTable");
+    table.innerHTML = `
+      <tr>
+        <th>التاريخ</th>
+        <th>اسم المنتج</th>
+        <th>عدد المبيعات</th>
+        <th>إجراءات</th>
+      </tr>
+    `;
+    let total = 0;
+    sales.forEach((sale, index) => {
+      total += sale.qty;
+      table.innerHTML += `
+        <tr>
+          <td>${sale.date}</td>
+          <td>${sale.name}</td>
+          <td>${sale.qty}</td>
+          <td>
+            <button class="edit-btn" onclick="editSale(${index})">تعديل</button>
+            <button class="delete-btn" onclick="deleteSale(${index})">حذف</button>
+          </td>
+        </tr>
+      `;
+    });
+    document.getElementById("totalSales").innerText = "إجمالي المبيعات: " + total;
+  }
+
+  function addSale() {
+    let name = document.getElementById("productName").value;
+    let qty = parseInt(document.getElementById("productQty").value);
+    if (!name || isNaN(qty) || qty <= 0) return alert("أدخل بيانات صحيحة");
+    let today = new Date().toLocaleDateString("ar-EG");
+    sales.push({ date: today, name: name, qty: qty });
+    saveData();
+    renderTable();
+    document.getElementById("productName").value = "";
+    document.getElementById("productQty").value = "";
+  }
+
+  function deleteSale(index) {
+    if (confirm("هل تريد حذف هذا السجل؟")) {
+      sales.splice(index, 1);
+      saveData();
+      renderTable();
+    }
+  }
+
+  function editSale(index) {
+    let newName = prompt("أدخل اسم المنتج الجديد", sales[index].name);
+    let newQty = parseInt(prompt("أدخل عدد المبيعات الجديد", sales[index].qty));
+    if (!newName || isNaN(newQty) || newQty <= 0) return alert("بيانات غير صحيحة");
+    sales[index].name = newName;
+    sales[index].qty = newQty;
+    saveData();
+    renderTable();
+  }
+
+  function filterSales() {
+    let filterName = document.getElementById("filterProduct").value;
+    if (!filterName) return alert("أدخل اسم المنتج");
+    let sum = sales.filter(s => s.name === filterName).reduce((acc, s) => acc + s.qty, 0);
+    document.getElementById("productTotal").innerText = `إجمالي مبيعات "${filterName}": ${sum}`;
+  }
+
+  renderTable();
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log("Service Worker registered"))
+      .catch(err => console.error("SW registration failed:", err));
+  }
+</script>
+
+</body>
+</html>      <label class="ghost" style="padding:8px 12px;display:inline-block;cursor:pointer">
         استيراد نسخة
         <input id="restoreInput" type="file" accept=".json" style="display:none">
       </label>
